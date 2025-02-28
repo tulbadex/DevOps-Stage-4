@@ -1,169 +1,130 @@
 services:
-  # Traefik Service
+
   traefik:
-    container_name: traefik
-    image: traefik:v2.9
+    image: traefik:v2.10
     command:
-      - "--api.insecure=true"  # Enables the web UI (for dev only)
-      - "--providers.docker=true"  # Enables Docker as a provider
-      - "--providers.docker.exposedbydefault=false"  # Don't expose all services by default
-      - "--entrypoints.web.address=:80"  # Define web entrypoint on port 80
-      - "--entrypoints.websecure.address=:443"  # Define websecure entrypoint on port 443
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"  # Redirect HTTP to HTTPS
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"  # Use HTTPS scheme for redirection
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"  # 301 redirect
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"  # Enable HTTP challenge
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"  # Use web entrypoint for challenge
-      - "--certificatesresolvers.letsencrypt.acme.email=tulbadex@gmail.com"  # Your email for Let's Encrypt
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"  # Certificate storage
-      - "--log.level=DEBUG"  # Added for debugging
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.email=tulbadex@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--accesslog=true"
+      - "--log.level=DEBUG"
+      - "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
     ports:
-      - "80:80"    # Web port
-      - "443:443"  # HTTPS port
-      - "8080:8080"  # Traefik dashboard (for dev only)
+      - "80:80"
+      - "443:443"
+      - "8088:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to Docker socket
-      # - ./traefik.yaml:/etc/traefik/traefik.yml
       - ./letsencrypt:/letsencrypt
-    labels:
-      - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
-      - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
-      - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
-      - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - app-network
-    restart: unless-stopped
-
-  # Frontend Service
   frontend:
     container_name: frontend
-    build: ./frontend
+    build:
+      context: ./frontend
+    ports:
+      "8080:8080"
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.tls.certresolver=myresolver"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+    networks:
+     - app-network
     depends_on:
       - auth-api
       - todos-api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
-      # - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
-      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.frontend.middlewares=cors@docker"
-    env_file:
-      - .env
-    networks:
-      - app-network
 
-  # Auth API Service
   auth-api:
     container_name: auth-api
-    build: ./auth-api
+    build:
+      context: ./auth-api
+    ports:
+      "8081:8081"
     env_file:
       - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api.entrypoints=websecure"
+      - "traefik.http.routers.auth-api.tls=true"
+      - "traefik.http.routers.auth-api.tls.certresolver=myresolver"
+      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
+      - "traefik.http.middlewares.auth-api-strip.stripprefix.prefixes=/api/auth"
+      - "traefik.http.routers.auth-api.middlewares=auth-api-strip"
+    networks:
+      - app-network
     depends_on:
       - users-api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.auth-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/auth`)"
-      - "traefik.http.routers.auth-api.entrypoints=websecure"
-      - "traefik.http.routers.auth-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
-      - "traefik.http.middlewares.auth-strip-prefix.stripprefix.prefixes=/auth"
-      - "traefik.http.routers.auth-api.middlewares=cors@docker"
-    networks:
-      - app-network
-    # Add this for debugging
-    ports:
-      - "8081:8081"
 
-  # Todos API Service
   todos-api:
     container_name: todos-api
-    build: ./todos-api
+    build:
+      context: ./todos-api
+    ports:
+      - "8082:8082"
     env_file:
       - .env
-    depends_on:
-      - redis-queue
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.todos-api.rule=PathPrefix(`/todos`)"
-      - "traefik.http.routers.todos-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/todos`)"
+      - "traefik.http.routers.todos-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/todos`)"
       - "traefik.http.routers.todos-api.entrypoints=websecure"
-      - "traefik.http.routers.todos-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.todos-api.tls=true"
+      - "traefik.http.routers.todos-api.tls.certresolver=myresolver"
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
-      - "traefik.http.routers.todos-api.middlewares=cors@docker"
+      - "traefik.http.middlewares.todos-api-strip.stripprefix.prefixes=/api/todos"
+      - "traefik.http.routers.todos-api.middlewares=todos-api-strip"
     networks:
       - app-network
-    ports:
-      - "8082:8082"  # Direct port for debugging
+    depends_on:
+      - redis-queue
 
-  # Users API Service
   users-api:
     container_name: users-api
-    build: ./users-api
+    build:
+      context: ./users-api
+    ports:
+      - "8083:8083"
     env_file:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.users-api.rule=PathPrefix(`/users`)"
-      - "traefik.http.routers.users-api.rule=Host(`test-docker-aws.duckdns.org`)"
+      - "traefik.http.routers.users-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/users`)"
       - "traefik.http.routers.users-api.entrypoints=websecure"
-      - "traefik.http.routers.users-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.users-api.tls=true"
+      - "traefik.http.routers.users-api.tls.certresolver=myresolver"
       - "traefik.http.services.users-api.loadbalancer.server.port=8083"
-      - "traefik.http.routers.users-api.middlewares=cors@docker"
+      - "traefik.http.middlewares.users-api-strip.stripprefix.prefixes=/api/users"
+      - "traefik.http.routers.users-api.middlewares=users-api-strip"
     networks:
       - app-network
-    ports:
-      - "8083:8083"  # Direct port for debugging
-    # Make sure this service starts quickly and properly
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/users/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
-  # Log Message Processor
-  log-processor:
-    build: ./log-message-processor
-    depends_on:
-      - redis-queue
+  log-message-processor:
+    build:
+      context: ./log-message-processor
     env_file:
       - .env
     networks:
       - app-network
+    depends_on:
+      - redis-queue
 
-  # Redis Queue
   redis-queue:
     image: redis:alpine
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
     networks:
       - app-network
-
-  zipkin:
-    image: openzipkin/zipkin
-    ports:
-      - "9411:9411"
-    networks:
-      - app-network
-
-  # Nginx for routing
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - frontend
-  #     - auth-api
-  #     - todos-api
-  #     - users-api
-  #   networks:
-  #     - app-network
 
 networks:
   app-network:
