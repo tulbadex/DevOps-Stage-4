@@ -44,7 +44,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.frontend.loadbalancer.server.port=8080"
-      - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
+      # - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
+      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.frontend.middlewares=cors@docker"
@@ -63,7 +64,7 @@ services:
       - users-api
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.auth-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/auth`)"
       - "traefik.http.routers.auth-api.entrypoints=websecure"
       - "traefik.http.routers.auth-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
@@ -86,7 +87,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.todos-api.rule=PathPrefix(`/todos`)"
-      - "traefik.http.routers.todos-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/todos`)"
+      - "traefik.http.routers.todos-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/todos`)"
       - "traefik.http.routers.todos-api.entrypoints=websecure"
       - "traefik.http.routers.todos-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
@@ -105,7 +106,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.users-api.rule=PathPrefix(`/users`)"
-      - "traefik.http.routers.users-api.rule=Host(`todoapp-devops.duckdns.org`)"
+      - "traefik.http.routers.users-api.rule=Host(`test-docker-aws.duckdns.org`)"
       - "traefik.http.routers.users-api.entrypoints=websecure"
       - "traefik.http.routers.users-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.users-api.loadbalancer.server.port=8083"
