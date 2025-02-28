@@ -13,7 +13,7 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"  # 301 redirect
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"  # Enable HTTP challenge
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"  # Use web entrypoint for challenge
-      - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"  # Your email for Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.email=tulbadex@gmail.com"  # Your email for Let's Encrypt
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"  # Certificate storage
       - "--log.level=DEBUG"  # Added for debugging
     ports:
@@ -22,7 +22,7 @@ services:
       - "8080:8080"  # Traefik dashboard (for dev only)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to Docker socket
-      - ./traefik.yaml:/etc/traefik/traefik.yml
+      # - ./traefik.yaml:/etc/traefik/traefik.yml
       - ./letsencrypt:/letsencrypt
     labels:
       - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
