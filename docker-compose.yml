@@ -1,6 +1,7 @@
 services:
   # Traefik Service
   traefik:
+    container_name: traefik
     image: traefik:v2.9
     command:
       - "--api.insecure=true"  # Enables the web UI (for dev only)
@@ -45,7 +46,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.frontend.loadbalancer.server.port=8080"
       # - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
-      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`)"
+      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.frontend.middlewares=cors@docker"
