@@ -24,6 +24,7 @@ services:
 
   # Frontend Service
   frontend:
+    container_name: frontend
     build: ./frontend
     depends_on:
       - auth-api
