@@ -7,9 +7,18 @@ services:
       - "--providers.docker=true"  # Enables Docker as a provider
       - "--providers.docker.exposedbydefault=false"  # Don't expose all services by default
       - "--entrypoints.web.address=:80"  # Define web entrypoint on port 80
+      - "--entrypoints.websecure.address=:443"  # Define websecure entrypoint on port 443
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"  # Redirect HTTP to HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"  # Use HTTPS scheme for redirection
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"  # 301 redirect
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"  # Enable HTTP challenge
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"  # Use web entrypoint for challenge
+      - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"  # Your email for Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"  # Certificate storage
       - "--log.level=DEBUG"  # Added for debugging
     ports:
-      - "80:80"  # Web port
+      - "80:80"    # Web port
+      - "443:443"  # HTTPS port
       - "8080:8080"  # Traefik dashboard (for dev only)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to Docker socket
@@ -34,7 +43,6 @@ services:
       - todos-api
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=8080"
       - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
