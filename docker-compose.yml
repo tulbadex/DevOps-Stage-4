@@ -40,7 +40,7 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`test-docker-aws.duckdns.org`)"
+      - "traefik.http.routers.frontend.rule=Host(`todoapp-devops.duckdns.org`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=myresolver"
@@ -61,7 +61,7 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.auth-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/api/auth`)"
       - "traefik.http.routers.auth-api.entrypoints=websecure"
       - "traefik.http.routers.auth-api.tls=true"
       - "traefik.http.routers.auth-api.tls.certresolver=myresolver"
@@ -83,7 +83,7 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.todos-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/todos`)"
+      - "traefik.http.routers.todos-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/api/todos`)"
       - "traefik.http.routers.todos-api.entrypoints=websecure"
       - "traefik.http.routers.todos-api.tls=true"
       - "traefik.http.routers.todos-api.tls.certresolver=myresolver"
@@ -105,7 +105,7 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.users-api.rule=Host(`test-docker-aws.duckdns.org`) && PathPrefix(`/api/users`)"
+      - "traefik.http.routers.users-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/api/users`)"
       - "traefik.http.routers.users-api.entrypoints=websecure"
       - "traefik.http.routers.users-api.tls=true"
       - "traefik.http.routers.users-api.tls.certresolver=myresolver"
