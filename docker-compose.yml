@@ -63,7 +63,6 @@ services:
       - users-api
     labels:
       - "traefik.enable=true"
-      - "traefik.enable=true"
       - "traefik.http.routers.auth-api.rule=Host(`todoapp-devops.duckdns.org`) && PathPrefix(`/auth`)"
       - "traefik.http.routers.auth-api.entrypoints=websecure"
       - "traefik.http.routers.auth-api.tls.certresolver=letsencrypt"
