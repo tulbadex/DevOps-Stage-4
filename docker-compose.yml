@@ -1,0 +1,156 @@
+services:
+  # Traefik Service
+  traefik:
+    image: traefik:v2.9
+    command:
+      - "--api.insecure=true"  # Enables the web UI (for dev only)
+      - "--providers.docker=true"  # Enables Docker as a provider
+      - "--providers.docker.exposedbydefault=false"  # Don't expose all services by default
+      - "--entrypoints.web.address=:80"  # Define web entrypoint on port 80
+      - "--log.level=DEBUG"  # Added for debugging
+    ports:
+      - "80:80"  # Web port
+      - "8080:8080"  # Traefik dashboard (for dev only)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only access to Docker socket
+    labels:
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
+      - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+    networks:
+      - app-network
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    depends_on:
+      - auth-api
+      - todos-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  # Auth API Service
+  auth-api:
+    container_name: auth-api
+    build: ./auth-api
+    env_file:
+      - .env
+    depends_on:
+      - users-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-api.rule=PathPrefix(`/login`) || PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth-api.entrypoints=web"
+      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
+      # Add middleware to strip prefix if needed
+      - "traefik.http.middlewares.auth-strip-prefix.stripprefix.prefixes=/auth"
+      - "traefik.http.routers.auth-api.middlewares=auth-strip-prefix@docker"
+      # Health check
+      - "traefik.http.services.auth-api.loadbalancer.healthcheck.path=/version"
+      - "traefik.http.services.auth-api.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.routers.auth-api.middlewares=cors@docker"
+    networks:
+      - app-network
+    # Add this for debugging
+    ports:
+      - "8081:8081"
+
+  # Todos API Service
+  todos-api:
+    container_name: todos-api
+    build: ./todos-api
+    env_file:
+      - .env
+    depends_on:
+      - redis-queue
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.todos-api.rule=PathPrefix(`/todos`)"
+      - "traefik.http.routers.todos-api.entrypoints=web"
+      - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
+      - "traefik.http.routers.todos-api.middlewares=cors@docker"
+    networks:
+      - app-network
+    ports:
+      - "8082:8082"  # Direct port for debugging
+
+  # Users API Service
+  users-api:
+    container_name: users-api
+    build: ./users-api
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.users-api.rule=PathPrefix(`/users`)"
+      - "traefik.http.routers.users-api.entrypoints=web"
+      - "traefik.http.services.users-api.loadbalancer.server.port=8083"
+      - "traefik.http.routers.users-api.middlewares=cors@docker"
+    networks:
+      - app-network
+    ports:
+      - "8083:8083"  # Direct port for debugging
+    # Make sure this service starts quickly and properly
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/users/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Log Message Processor
+  log-processor:
+    build: ./log-message-processor
+    depends_on:
+      - redis-queue
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  # Redis Queue
+  redis-queue:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - app-network
+
+  # Nginx for routing
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - frontend
+  #     - auth-api
+  #     - todos-api
+  #     - users-api
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
